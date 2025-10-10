@@ -84,7 +84,7 @@ if ($db_connection) {
 <body>
     <div class="container">
         <div class="header">
-            <h1>Visor de Activos de la Empresa</h1>
+            <h1>De la rosca</h1>
             <p>Selecciona una tabla para ver sus registros.</p>
         </div>
         <div class="status <?php
@@ -132,4 +132,5 @@ if ($db_connection) {
     </div>
 </body>
 </html>
+
 
