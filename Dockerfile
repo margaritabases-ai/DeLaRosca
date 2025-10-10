@@ -1,11 +1,9 @@
+# Usar una imagen oficial de PHP con el servidor web Apache
 FROM php:8.2-apache
 
-# Dependencias de Postgres para compilar pdo_pgsql
-RUN apt-get update && apt-get install -y libpq-dev \
-    && docker-php-ext-install pdo pdo_pgsql \
-    && rm -rf /var/lib/apt/lists/*
+# ---- LÍNEA AÑADIDA ----
+# Instalar las extensiones de PHP necesarias para conectar con PostgreSQL
+RUN docker-php-ext-install pdo pdo_pgsql pgsql
 
-# Copia tu app
+# Copiar todo el contenido de tu repositorio
 COPY . /var/www/html/
-
-EXPOSE 80
