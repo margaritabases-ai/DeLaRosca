@@ -2,36 +2,51 @@
 
 // --- CONFIGURACIÓN ---
 $tablas_permitidas = ['empleado', 'departamento', 'computadora', 'nobreak', 'impresora', 'telefono'];
-
 $tabla_seleccionada = isset($_GET['tabla']) ? htmlspecialchars($_GET['tabla']) : $tablas_permitidas[0];
 
 if (!in_array($tabla_seleccionada, $tablas_permitidas)) {
     die("Error: Tabla no válida.");
 }
 
-// --- CONEXIÓN A LA BASE DE DATOS (VERSIÓN MEJORADA) ---
-$connection_string_original = getenv('DATABASE_URL');
+// --- CONEXIÓN A LA BASE DE DATOS (VERSIÓN ROBUSTA) ---
 $db_connection = null;
 $mensaje_conexion = "";
+$database_url = getenv('DATABASE_URL');
 
-if ($connection_string_original) {
-    // Añadimos sslmode=require si no está presente en la URL de Neon.
-    // Esto asegura la conexión segura que Neon necesita.
-    $connection_string_final = $connection_string_original . "?sslmode=require";
-    
-    // pg_connect es la función de PHP para conectarse a PostgreSQL.
-    $db_connection = pg_connect($connection_string_final);
-
-    if ($db_connection) {
-        $mensaje_conexion = "✅ Conexión a la base de datos exitosa.";
-    } else {
-        $mensaje_conexion = "❌ Error: No se pudo conectar a la base de datos. Verifica la DATABASE_URL.";
-    }
-} else {
+if (empty($database_url)) {
     $mensaje_conexion = "⚠️ Advertencia: La variable de entorno DATABASE_URL no está configurada.";
+} else {
+    // 1. Descomponer la URL de la base de datos en sus partes.
+    $url_parts = parse_url($database_url);
+
+    if ($url_parts === false) {
+        $mensaje_conexion = "❌ Error: La DATABASE_URL tiene un formato no válido.";
+    } else {
+        // 2. Extraer cada componente.
+        $host = $url_parts['host'];
+        $port = $url_parts['port'];
+        $user = $url_parts['user'];
+        $pass = $url_parts['pass'];
+        $dbname = ltrim($url_parts['path'], '/'); // Eliminar la barra inicial '/' del path
+
+        // 3. Construir la cadena de conexión explícita para pg_connect.
+        // Se añade sslmode=require para cumplir con los requisitos de Neon.
+        $connection_string = "host={$host} port={$port} dbname={$dbname} user={$user} password={$pass} sslmode=require";
+
+        // 4. Intentar conectar.
+        $db_connection = pg_connect($connection_string);
+
+        if ($db_connection) {
+            $mensaje_conexion = "✅ Conexión a la base de datos exitosa.";
+        } else {
+            // Ofrecemos un mensaje de error más detallado si es posible.
+            $error = pg_last_error(); // Obtiene el error real de la conexión
+            $mensaje_conexion = "❌ Error: No se pudo conectar a la base de datos. Detalle: " . htmlspecialchars($error);
+        }
+    }
 }
 
-// --- OBTENCIÓN DE DATOS ---
+// --- OBTENCIÓN DE DATOS (sin cambios) ---
 $columnas = [];
 $filas = [];
 
@@ -57,7 +72,7 @@ if ($db_connection) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visor de Base de Datos</title>
-    <style>
+     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f4f4f9; color: #333; }
         .container { max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .header { border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px; }
@@ -86,7 +101,7 @@ if ($db_connection) {
         <div class="status <?php
             $status_class = 'warning';
             if ($db_connection) $status_class = 'success';
-            if (!$db_connection && $connection_string_original) $status_class = 'error';
+            if (!$db_connection && $database_url) $status_class = 'error';
             echo $status_class;
         ?>">
             <?php echo $mensaje_conexion; ?>
