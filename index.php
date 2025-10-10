@@ -8,45 +8,34 @@ if (!in_array($tabla_seleccionada, $tablas_permitidas)) {
     die("Error: Tabla no válida.");
 }
 
-// --- CONEXIÓN A LA BASE DE DATOS (VERSIÓN ROBUSTA) ---
+// --- CONEXIÓN A LA BASE DE DATOS (VERSIÓN FINAL) ---
 $db_connection = null;
 $mensaje_conexion = "";
-$database_url = getenv('DATABASE_URL');
 
-if (empty($database_url)) {
-    $mensaje_conexion = "⚠️ Advertencia: La variable de entorno DATABASE_URL no está configurada.";
+// 1. Leer las credenciales desde variables de entorno separadas.
+$host = getenv('DB_HOST');
+$dbname = getenv('DB_NAME');
+$user = getenv('DB_USER');
+$pass = getenv('DB_PASS');
+
+if (empty($host) || empty($dbname) || empty($user) || empty($pass)) {
+    $mensaje_conexion = "⚠️ Advertencia: Faltan una o más variables de entorno de la base de datos (DB_HOST, DB_NAME, DB_USER, DB_PASS).";
 } else {
-    // 1. Descomponer la URL de la base de datos en sus partes.
-    $url_parts = parse_url($database_url);
+    // 2. Construir la cadena de conexión en el formato key=value.
+    $connection_string = "host={$host} dbname={$dbname} user={$user} password={$pass} sslmode=require";
 
-    if ($url_parts === false) {
-        $mensaje_conexion = "❌ Error: La DATABASE_URL tiene un formato no válido.";
+    // 3. Intentar conectar.
+    $db_connection = pg_connect($connection_string);
+
+    if ($db_connection) {
+        $mensaje_conexion = "✅ Conexión a la base de datos exitosa.";
     } else {
-        // 2. Extraer cada componente.
-        $host = $url_parts['host'];
-        $port = $url_parts['port'];
-        $user = $url_parts['user'];
-        $pass = $url_parts['pass'];
-        $dbname = ltrim($url_parts['path'], '/'); // Eliminar la barra inicial '/' del path
-
-        // 3. Construir la cadena de conexión explícita para pg_connect.
-        // Se añade sslmode=require para cumplir con los requisitos de Neon.
-        $connection_string = "host={$host} port={$port} dbname={$dbname} user={$user} password={$pass} sslmode=require";
-
-        // 4. Intentar conectar.
-        $db_connection = pg_connect($connection_string);
-
-        if ($db_connection) {
-            $mensaje_conexion = "✅ Conexión a la base de datos exitosa.";
-        } else {
-            // Ofrecemos un mensaje de error más detallado si es posible.
-            $error = pg_last_error(); // Obtiene el error real de la conexión
-            $mensaje_conexion = "❌ Error: No se pudo conectar a la base de datos. Detalle: " . htmlspecialchars($error);
-        }
+        $error = pg_last_error();
+        $mensaje_conexion = "❌ Error: No se pudo conectar. Detalle: " . htmlspecialchars($error);
     }
 }
 
-// --- OBTENCIÓN DE DATOS (sin cambios) ---
+// --- OBTENCIÓN DE DATOS ---
 $columnas = [];
 $filas = [];
 
@@ -101,7 +90,7 @@ if ($db_connection) {
         <div class="status <?php
             $status_class = 'warning';
             if ($db_connection) $status_class = 'success';
-            if (!$db_connection && $database_url) $status_class = 'error';
+            if (!$db_connection && $host) $status_class = 'error';
             echo $status_class;
         ?>">
             <?php echo $mensaje_conexion; ?>
