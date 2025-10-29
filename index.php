@@ -40,18 +40,13 @@ $columnas = [];
 $filas = [];
 
 if ($db_connection) {
-    $query = 'SELECT * FROM ' . pg_escape_identifier($db_connection, $tabla_seleccionada);
+
+    $query = "SELECT * FROM {$tabla_seleccionada}"; 
+    
+
+    
     $resultado = pg_query($db_connection, $query);
-    if ($resultado) {
-        $num_columnas = pg_num_fields($resultado);
-        for ($i = 0; $i < $num_columnas; $i++) {
-            $columnas[] = pg_field_name($resultado, $i);
-        }
-        $filas = pg_fetch_all($resultado);
-        if ($filas === false) {
-            $filas = [];
-        }
-    }
+
 }
 
 ?>
@@ -132,5 +127,6 @@ if ($db_connection) {
     </div>
 </body>
 </html>
+
 
 
