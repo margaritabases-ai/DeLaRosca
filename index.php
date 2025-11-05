@@ -72,7 +72,7 @@ if ($db_connection) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor de Base de Datos</title>
+    <title>De La Rosca</title>
      <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f4f4f9; color: #333; }
         .container { max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -97,7 +97,7 @@ if ($db_connection) {
 <body>
     <div class="container">
         <div class="header">
-            <h1>Visor de Activos de la Empresa</h1>
+            <h1>De La Rosca</h1>
             <p>Selecciona una vista o tabla para ver sus registros.</p>
         </div>
         <div class="status <?php
@@ -149,4 +149,5 @@ if ($db_connection) {
     </div>
 </body>
 </html>
+
 
