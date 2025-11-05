@@ -1,7 +1,18 @@
 <?php
 
 // --- CONFIGURACIÓN ---
-$tablas_permitidas = ['empleado', 'departamento', 'computadora', 'nobreak', 'impresora', 'telefono'];
+// --- ACTUALIZACIÓN ---
+// Ahora consultamos nuestras Vistas (con prefijo v_) y las tablas de inventario.
+$tablas_permitidas = [
+    'v_empleados_completos', 
+    'v_departamentos_completos', 
+    'v_equipos_asignados',
+    'computadora', 
+    'nobreak', 
+    'telefono', 
+    'impresora'
+];
+
 $tabla_seleccionada = isset($_GET['tabla']) ? htmlspecialchars($_GET['tabla']) : $tablas_permitidas[0];
 
 if (!in_array($tabla_seleccionada, $tablas_permitidas)) {
@@ -12,19 +23,15 @@ if (!in_array($tabla_seleccionada, $tablas_permitidas)) {
 $db_connection = null;
 $mensaje_conexion = "";
 
-// 1. Leer las credenciales desde variables de entorno separadas.
 $host = getenv('DB_HOST');
 $dbname = getenv('DB_NAME');
 $user = getenv('DB_USER');
 $pass = getenv('DB_PASS');
 
 if (empty($host) || empty($dbname) || empty($user) || empty($pass)) {
-    $mensaje_conexion = "⚠️ Advertencia: Faltan una o más variables de entorno de la base de datos (DB_HOST, DB_NAME, DB_USER, DB_PASS).";
+    $mensaje_conexion = "⚠️ Advertencia: Faltan variables de entorno (DB_HOST, DB_NAME, DB_USER, DB_PASS).";
 } else {
-    // 2. Construir la cadena de conexión en el formato key=value.
     $connection_string = "host={$host} dbname={$dbname} user={$user} password={$pass} sslmode=require";
-
-    // 3. Intentar conectar.
     $db_connection = pg_connect($connection_string);
 
     if ($db_connection) {
@@ -40,8 +47,11 @@ $columnas = [];
 $filas = [];
 
 if ($db_connection) {
+    // Usamos pg_escape_identifier para sanitizar el nombre de la tabla/vista
     $query = 'SELECT * FROM ' . pg_escape_identifier($db_connection, $tabla_seleccionada);
+    
     $resultado = pg_query($db_connection, $query);
+    
     if ($resultado) {
         $num_columnas = pg_num_fields($resultado);
         for ($i = 0; $i < $num_columnas; $i++) {
@@ -51,6 +61,8 @@ if ($db_connection) {
         if ($filas === false) {
             $filas = [];
         }
+    } else {
+         $mensaje_conexion .= " | ❌ Error al consultar la vista/tabla: " . htmlspecialchars(pg_last_error($db_connection));
     }
 }
 
@@ -60,7 +72,7 @@ if ($db_connection) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>De La Rosca</title>
+    <title>Visor de Base de Datos</title>
      <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f4f4f9; color: #333; }
         .container { max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -79,18 +91,19 @@ if ($db_connection) {
         th { background-color: #f2f2f2; text-transform: capitalize; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         tr:hover { background-color: #f1f1f1; }
+        .table-wrapper { overflow-x: auto; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>De la rosca</h1>
-            <p>Selecciona una tabla para ver sus registros.</p>
+            <h1>Visor de Activos de la Empresa</h1>
+            <p>Selecciona una vista o tabla para ver sus registros.</p>
         </div>
         <div class="status <?php
             $status_class = 'warning';
-            if ($db_connection) $status_class = 'success';
-            if (!$db_connection && $host) $status_class = 'error';
+            if ($db_connection && strpos($mensaje_conexion, 'Error') === false) $status_class = 'success';
+            if (strpos($mensaje_conexion, 'Error') !== false) $status_class = 'error';
             echo $status_class;
         ?>">
             <?php echo $mensaje_conexion; ?>
@@ -98,18 +111,22 @@ if ($db_connection) {
         <nav>
             <?php foreach ($tablas_permitidas as $tabla): ?>
                 <a href="?tabla=<?php echo $tabla; ?>" class="<?php if ($tabla === $tabla_seleccionada) echo 'active'; ?>">
-                    <?php echo ucfirst(str_replace('_', ' ', $tabla)); ?>
+                    <?php 
+                        // Limpiamos el nombre para mostrarlo (ej. v_empleados_completos -> Empleados Completos)
+                        $nombre_limpio = str_replace(['v_', '_'], ['', ' '], $tabla);
+                        echo ucwords($nombre_limpio); 
+                    ?>
                 </a>
             <?php endforeach; ?>
         </nav>
-        <div style="overflow-x:auto;">
-            <h2>Registros de: "<?php echo ucfirst($tabla_seleccionada); ?>"</h2>
+        <div class="table-wrapper">
+            <h2>Registros de: "<?php echo ucwords(str_replace(['v_', '_'], ['', ' '], $tabla_seleccionada)); ?>"</h2>
             <?php if ($db_connection && !empty($filas)): ?>
                 <table>
                     <thead>
                         <tr>
                             <?php foreach ($columnas as $columna): ?>
-                                <th><?php echo htmlspecialchars(str_replace('_', ' ', $columna)); ?></th>
+                                <th><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $columna))); ?></th>
                             <?php endforeach; ?>
                         </tr>
                     </thead>
@@ -124,14 +141,11 @@ if ($db_connection) {
                     </tbody>
                 </table>
             <?php elseif ($db_connection && empty($filas)): ?>
-                <p>La tabla "<?php echo $tabla_seleccionada; ?>" no tiene registros.</p>
+                <p>La vista/tabla "<?php echo $tabla_seleccionada; ?>" no tiene registros.</p>
             <?php else: ?>
-                <p>No se pueden mostrar los datos. Verifica la conexión a la base de datos.</p>
+                <p>No se pueden mostrar los datos. Verifica la conexión a la base de datos y la consulta.</p>
             <?php endif; ?>
         </div>
     </div>
 </body>
 </html>
-
-
-
