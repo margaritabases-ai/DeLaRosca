@@ -134,7 +134,7 @@ if ($db_connection) {
                         <?php foreach ($filas as $fila): ?>
                             <tr>
                                 <?php foreach ($fila as $valor): ?>
-                                    <td><?php echo htmlspecialchars($valor); ?></td>
+                                    <td><?php echo htmlspecialchars($valor ?? ''); ?></td>
                                 <?php endforeach; ?>
                             </tr>
                         <?php endforeach; ?>
@@ -149,3 +149,4 @@ if ($db_connection) {
     </div>
 </body>
 </html>
+
