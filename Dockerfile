@@ -7,5 +7,5 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && docker-php-ext-install pdo pdo_pgsql pgsql
 
-# Copiar todo el contenido de tu repositorio
+# Copiar todo el contenido de repositorio
 COPY . /var/www/html/
